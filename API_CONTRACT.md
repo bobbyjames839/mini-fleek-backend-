@@ -260,6 +260,90 @@ Public. Product detail page.
 
 ---
 
+## Reviews
+
+### `GET /reviews`
+Public. Returns site-wide reviews (testimonials about Fleek as a whole — not tied to a product), newest first, plus a summary block.
+
+**200**
+```json
+{
+  "reviews": [
+    {
+      "id": "uuid",
+      "reviewer_name": "Maya R.",
+      "rating": 5,
+      "title": "Grading is honest",
+      "body": "Bundles arrive as described...",
+      "created_at": "2026-05-10T14:32:00.000Z"
+    }
+  ],
+  "summary": {
+    "count": 8,
+    "average_rating": 4.6
+  }
+}
+```
+
+- `rating` is an integer 1–5.
+- `title` may be `null`.
+- `summary.average_rating` is rounded to one decimal place across all reviews, or `null` when `count === 0`.
+
+---
+
+## AI
+
+### `POST /products/search`
+Public. Natural-language product search. The query is sent to OpenAI (`OPENAI_API_KEY` required; default model `gpt-4o-mini`, override via `OPENAI_MODEL`) to be translated into a structured filter, which is then executed against the products table. The response includes both the parsed filter (so the FE can show what was understood) and the matching products.
+
+**Request**
+```json
+{
+  "query": "Show me Y2K denim bundles under £8 per piece from European vendors, grade A only.",
+  "limit": 24
+}
+```
+
+- `query` is required, trimmed, capped at 300 characters.
+- `limit` is optional, clamped to 1–60, defaults to 24.
+
+**200**
+```json
+{
+  "query": "Show me Y2K denim bundles under £8 per piece from European vendors, grade A only.",
+  "parsed": {
+    "category_slug": "y2k-streetwear",
+    "vendor_slug": null,
+    "vendor_countries": ["GB", "TR"],
+    "brand_contains": null,
+    "grade": "Grade A",
+    "free_text": null,
+    "max_price_per_piece": 800,
+    "min_price_per_piece": null,
+    "max_total_price": null,
+    "min_total_price": null,
+    "min_piece_count": null,
+    "max_piece_count": null,
+    "sort": "newest"
+  },
+  "products": [ /* product summary shape, same as GET /products */ ],
+  "total": 3,
+  "limit": 24
+}
+```
+
+- All money fields in `parsed` are integer pence.
+- `parsed.vendor_countries` are ISO-2 codes drawn from the live catalogue.
+- `parsed.sort` is one of `newest` | `price_asc` | `price_desc` | `price_per_piece_asc` | `price_per_piece_desc`.
+- The model is given the catalogue's category slugs, vendor slugs, vendor country codes and grade labels; values outside those lists are dropped to `null` / `[]` before the SQL runs (so a query for a non-existent vendor doesn't return all products).
+- `products` items are the same shape as `GET /products` (with `vendor.country` included).
+
+**400** — missing/empty `query`.
+**502** — OpenAI could not produce a valid filter for this query.
+**503** — `OPENAI_API_KEY` or Supabase not configured.
+
+---
+
 ## Cart
 
 All cart endpoints **require auth**. The cart is auto-scoped to the authenticated user — there is no `cartId` in the path.
@@ -444,6 +528,8 @@ Order line items are **snapshots** — they keep the price/name/photo at the tim
 | `GET /vendors/:slug` | ✅ implemented |
 | `GET /products` | ✅ implemented |
 | `GET /products/:id` | ✅ implemented |
+| `GET /reviews` | ✅ implemented |
+| `POST /products/search` | ✅ implemented |
 | `GET /cart` | ✅ implemented |
 | `POST /cart/items` | ✅ implemented |
 | `PATCH /cart/items/:itemId` | ✅ implemented |

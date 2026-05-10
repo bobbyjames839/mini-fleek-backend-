@@ -106,6 +106,23 @@ create table if not exists public.order_items (
 
 create index if not exists order_items_order_idx on public.order_items (order_id);
 
+create table if not exists public.reviews (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id) on delete set null,
+  reviewer_name text not null,
+  rating int not null check (rating between 1 and 5),
+  title text,
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+-- Reviews started life as per-product. They are now site-wide testimonials,
+-- so drop product_id (and its index) if a previous schema version created it.
+alter table public.reviews drop column if exists product_id;
+drop index if exists public.reviews_product_idx;
+
+create index if not exists reviews_user_idx on public.reviews (user_id);
+
 -- ----------------------------------------------------------------------------
 -- Row Level Security
 -- ----------------------------------------------------------------------------
@@ -116,6 +133,7 @@ alter table public.products     enable row level security;
 alter table public.cart_items   enable row level security;
 alter table public.orders       enable row level security;
 alter table public.order_items  enable row level security;
+alter table public.reviews      enable row level security;
 
 -- Catalog: public read, writes only via service role (which bypasses RLS).
 drop policy if exists "vendors public read"    on public.vendors;
@@ -148,3 +166,16 @@ drop policy if exists "order items owner select" on public.order_items;
 create policy "order items owner select" on public.order_items for select using (
   exists (select 1 from public.orders o where o.id = order_id and o.user_id = auth.uid())
 );
+
+-- Reviews: public read. Authenticated users can write reviews scoped to themselves.
+drop policy if exists "reviews public read" on public.reviews;
+create policy "reviews public read" on public.reviews for select using (true);
+
+drop policy if exists "reviews owner insert" on public.reviews;
+create policy "reviews owner insert" on public.reviews for insert with check (auth.uid() = user_id);
+
+drop policy if exists "reviews owner update" on public.reviews;
+create policy "reviews owner update" on public.reviews for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "reviews owner delete" on public.reviews;
+create policy "reviews owner delete" on public.reviews for delete using (auth.uid() = user_id);

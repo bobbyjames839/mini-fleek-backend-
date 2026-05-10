@@ -19,4 +19,6 @@ export const env = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
   supabaseConfigured: missingSupabaseEnv.length === 0,
   frontendOrigin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  openaiModel: process.env.OPENAI_MODEL || 'gpt-4o-mini',
 }

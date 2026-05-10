@@ -13,7 +13,7 @@ import { createClient } from '@supabase/supabase-js'
 import { env } from '../src/config/env'
 
 const BASE = process.env.SMOKE_BASE_URL || `http://localhost:${env.port}`
-const TEST_EMAIL_DOMAIN = 'fleek-smoke.test'
+const TEST_EMAIL_DOMAIN = 'mailinator.com'
 
 if (!env.supabaseUrl || !env.supabaseServiceRoleKey) {
   console.error('Smoke test needs SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in backend/.env.')
