@@ -1,32 +1,13 @@
 import express from 'express'
 import { env } from '../config/env'
 import { supabase } from '../lib/supabase'
+import {
+  PRODUCT_SUMMARY_SELECT,
+  ProductRow,
+  mapProductSummary,
+} from '../lib/products'
 
 const router = express.Router()
-
-// ---- Types -----------------------------------------------------------------
-
-interface ProductRow {
-  id: string
-  name: string
-  slug: string
-  brand: string
-  photos: string[] | null
-  piece_count: number
-  total_price: number
-  price_per_piece: number
-  original_total_price: number | null
-  status: 'active' | 'sold_out'
-  vendor: { id: string; name: string; slug: string; country?: string } | null
-  category: { id: string; name: string; slug: string } | null
-}
-
-const PRODUCT_SUMMARY_SELECT = `
-  id, name, slug, brand, photos, piece_count, total_price, price_per_piece,
-  original_total_price, status,
-  vendor:vendors!inner(id, name, slug, country),
-  category:categories!inner(id, name, slug)
-`
 
 // Compact rows fed to the AI. Keep this lean — every byte goes into the prompt.
 const PRODUCT_AI_SELECT = `
@@ -51,31 +32,6 @@ interface AiProductRow {
 
 function unavailable(res: express.Response, what: string) {
   return res.status(503).json({ error: `${what} is unavailable. Check backend/.env.` })
-}
-
-function discountPct(total: number, original: number | null): number | null {
-  if (!original || original <= total) return null
-  return Math.round((1 - total / original) * 100)
-}
-
-function mapProductSummary(row: ProductRow) {
-  return {
-    id: row.id,
-    name: row.name,
-    slug: row.slug,
-    brand: row.brand,
-    primary_photo: row.photos?.[0] ?? null,
-    piece_count: row.piece_count,
-    total_price: row.total_price,
-    price_per_piece: row.price_per_piece,
-    original_total_price: row.original_total_price,
-    discount_pct: discountPct(row.total_price, row.original_total_price),
-    status: row.status,
-    vendor: row.vendor
-      ? { id: row.vendor.id, name: row.vendor.name, slug: row.vendor.slug }
-      : null,
-    category: row.category,
-  }
 }
 
 // ---- AI ranking ------------------------------------------------------------
