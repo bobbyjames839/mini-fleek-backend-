@@ -106,29 +106,6 @@ Requires bearer token. Revokes the refresh token at Supabase.
 
 ---
 
-## Bootstrap
-
-### `GET /bootstrap`
-Public. Combined home-page payload — products, categories, vendors, and reviews in one round-trip. Use this on the marketplace landing page instead of firing four parallel requests.
-
-**200**
-```json
-{
-  "products": [ /* same shape as GET /products items, up to 60, newest first */ ],
-  "products_total": 27,
-  "categories": [ /* same as GET /categories */ ],
-  "vendors": [ /* same as GET /vendors */ ],
-  "reviews": [ /* same as GET /reviews items */ ],
-  "reviews_summary": { "count": 12, "average_rating": 4.7 }
-}
-```
-
-- Products are capped at 60 (the FE's listing-page limit). If `products_total > 60`, the FE should fall back to paginating `GET /products`.
-- Reviews are returned unbounded (site-wide testimonials, small set).
-- Anything that fails on the server returns a `500` with the first failing error.
-
----
-
 ## Categories
 
 ### `GET /categories`
@@ -165,27 +142,6 @@ Public.
   ]
 }
 ```
-
-### `GET /vendors/:slug`
-Public. Stretch — vendor profile page.
-
-**200**
-```json
-{
-  "vendor": {
-    "id": "uuid",
-    "name": "Karachi Threads",
-    "slug": "karachi-threads",
-    "country": "PK",
-    "rating": 4.7,
-    "about": "Short bio string.",
-    "image_url": "https://..."
-  },
-  "products": [ /* same shape as Product summary below */ ]
-}
-```
-
-**404** — unknown slug.
 
 ---
 
@@ -539,10 +495,8 @@ Order line items are **snapshots** — they keep the price/name/photo at the tim
 | `POST /auth/signup` | ✅ implemented |
 | `POST /auth/login` | ✅ implemented |
 | `POST /auth/logout` | ✅ implemented |
-| `GET /bootstrap` | ✅ implemented |
 | `GET /categories` | ✅ implemented |
 | `GET /vendors` | ✅ implemented |
-| `GET /vendors/:slug` | ✅ implemented |
 | `GET /products` | ✅ implemented |
 | `GET /products/:id` | ✅ implemented |
 | `GET /reviews` | ✅ implemented |
