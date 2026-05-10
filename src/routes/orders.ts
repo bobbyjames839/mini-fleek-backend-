@@ -139,14 +139,18 @@ router.post('/checkout', async (req, res) => {
 router.get('/orders', async (req, res) => {
   const { supa, user } = req as unknown as AuthedRequest
 
-  const { data, error } = await supa
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '20'), 10) || 20, 1), 60)
+  const offset = Math.max(parseInt(String(req.query.offset ?? '0'), 10) || 0, 0)
+
+  const { data, count, error } = await supa
     .from('orders')
-    .select('id, status, subtotal, total, item_count, created_at')
+    .select('id, status, subtotal, total, item_count, created_at', { count: 'exact' })
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1)
   if (error) return res.status(500).json({ error: error.message })
 
-  return res.json({ orders: data })
+  return res.json({ orders: data, total: count ?? 0, limit, offset })
 })
 
 // ---- Order detail ----------------------------------------------------------

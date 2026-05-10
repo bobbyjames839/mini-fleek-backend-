@@ -90,6 +90,52 @@ function unavailable(res: express.Response) {
   })
 }
 
+// ---- Bootstrap (combined home payload) -------------------------------------
+
+router.get('/bootstrap', async (_req, res) => {
+  if (!supabase) return unavailable(res)
+
+  const [productsRes, categoriesRes, vendorsRes, reviewsRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select(PRODUCT_SUMMARY_SELECT, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(0, 59),
+    supabase
+      .from('categories')
+      .select('id, name, slug, image_url')
+      .order('name', { ascending: true }),
+    supabase
+      .from('vendors')
+      .select('id, name, slug, country, rating, image_url')
+      .order('name', { ascending: true }),
+    supabase
+      .from('reviews')
+      .select('id, reviewer_name, rating, title, body, created_at')
+      .order('created_at', { ascending: false }),
+  ])
+
+  const firstError =
+    productsRes.error ?? categoriesRes.error ?? vendorsRes.error ?? reviewsRes.error
+  if (firstError) return res.status(500).json({ error: firstError.message })
+
+  const reviews = (reviewsRes.data ?? []) as Array<{ rating: number }>
+  const reviewCount = reviews.length
+  const averageRating =
+    reviewCount === 0
+      ? null
+      : Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviewCount) * 10) / 10
+
+  return res.json({
+    products: ((productsRes.data ?? []) as unknown as ProductRow[]).map(mapProductSummary),
+    products_total: productsRes.count ?? 0,
+    categories: categoriesRes.data ?? [],
+    vendors: vendorsRes.data ?? [],
+    reviews: reviewsRes.data ?? [],
+    reviews_summary: { count: reviewCount, average_rating: averageRating },
+  })
+})
+
 // ---- Categories ------------------------------------------------------------
 
 router.get('/categories', async (_req, res) => {
